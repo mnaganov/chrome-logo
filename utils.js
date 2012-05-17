@@ -1,0 +1,1 @@
+$ = document.getElementById.bind(document);
