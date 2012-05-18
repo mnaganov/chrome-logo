@@ -201,6 +201,8 @@ Controller.prototype = {
     if (this.handler.fingerDown) {
       if (this.square.isPointInside(this.handler.fingerX, this.handler.fingerY))
         this.square.angleSpeed = this.reducedSpeed;
+      else
+        this.square.angleSpeed = this.initialSpeed;
       if (this.handler.secondFingerDown &&
           (this.square.isPointInside(this.handler.fingerX, this.handler.fingerY) ||
            this.square.isPointInside(this.handler.secondFingerX, this.handler.secondFingerY))) {
@@ -239,7 +241,7 @@ function updateCanvasSize()
 var world = new World();
 world.addObject(new Square(100));
 world.addObject(new Border(3));
-//world.addObject(new Points(10000, world.objects[0]));
+// world.addObject(new Points(10000, world.objects[0]));
 var t0 = Date.now();
 var handler = new Handler();
 var controller = new Controller(world.objects[0], handler);
