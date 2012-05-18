@@ -3,10 +3,10 @@
     <title>Rotating Square</title>
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1">
     <link rel="stylesheet" type="text/css" href="square.css">
-    <script type="text/javascript" src="square.js"></script>
     <script type="text/javascript" src="utils.js"></script>
+    <script type="text/javascript" src="square.js"></script>
   </head>
-  <body onload="updateCanvasSize();" onresize="updateCanvasSize();">
+  <body onload="updateCanvasSize(); step();" onresize="updateCanvasSize();">
     <canvas id="canvas" width="200" height="200">
       Your browser doesn't support canvas.
     </canvas>

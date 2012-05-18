@@ -47,7 +47,7 @@ Square.prototype = {
       minY = Math.min(minY, pointY);
       maxY = Math.max(maxY, pointY);
     }
-    return [[minX - 1, minY - 1], [maxX + 1, maxY + 1]];
+    return [[minX - 2, minY - 2], [maxX + 2, maxY + 2]];
   },
 
   setCenter: function(centerX, centerY) {
@@ -70,12 +70,12 @@ Square.prototype = {
 var square = new Square(100);
 var t0 = Date.now();
 
-setInterval(
-  function () {
-    var t1 = Date.now();
-    square.animate(t1 - t0);
-    t0 = t1;
-  }, 1);
+function step() {
+  var t1 = Date.now();
+  square.animate(t1 - t0);
+  t0 = t1;
+  webkitRequestAnimationFrame(step);
+}
 
 function renderCanvas()
 {
