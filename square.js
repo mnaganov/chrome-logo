@@ -38,7 +38,7 @@ function Square(radius)
   this.centerY = 0;
   this.radius = radius;
   this.angle = 0;
-  this.angleSpeed = 0.0015;
+  this.angleSpeed = 0.001;
   this.pointAngles = [Math.PI / 4, 3 * Math.PI / 4, 5 * Math.PI / 4, 7 * Math.PI / 4];
 }
 
@@ -85,11 +85,19 @@ Square.prototype = {
   },
 
   isPointInside: function(x, y) {
+    // Quick rough check.
+    if (!this.isPointInsideRect(x, y, this.boundaryRect(this.calculatePoints(this.angle))))
+      return false;
+
+    // Precise check.
     x = x - this.centerX;
     y = this.centerY - y;
     var p = this.toCartesian(Math.sqrt(x * x + y * y), Math.atan2(y, x) + this.angle);
-    var rect = this.boundaryRect(this.calculatePoints(0));
-    return p[0] >= rect[0][0] && p[1] >= rect[0][1] && p[0] <= rect[1][0] && p[1] <= rect[1][1];
+    return this.isPointInsideRect(p[0], p[1], this.boundaryRect(this.calculatePoints(0)));
+  },
+
+  isPointInsideRect: function(x, y, rect) {
+    return x >= rect[0][0] && y >= rect[0][1] && x <= rect[1][0] && y <= rect[1][1];
   },
 
   radiusFromCenter: function(x, y) {
@@ -231,7 +239,7 @@ function updateCanvasSize()
 var world = new World();
 world.addObject(new Square(100));
 world.addObject(new Border(3));
-// world.addObject(new Points(10000, world.objects[0]));
+//world.addObject(new Points(10000, world.objects[0]));
 var t0 = Date.now();
 var handler = new Handler();
 var controller = new Controller(world.objects[0], handler);
