@@ -132,17 +132,63 @@ Points.prototype = {
   }
 };
 
+function Handler()
+{
+  this.fingerDown = false;
+  this.fingerX = null;
+  this.fingerY = null;
+}
 
-var world = new World();
-world.addObject(new Square(100));
-world.addObject(new Border(3));
-world.addObject(new Points(1000, world.objects[0]));
-var t0 = Date.now();
+Handler.prototype = {
+  onTouchStart: function(event) {
+    this.fingerDown = true;
+    var finger = event.targetTouches[0];
+    this.fingerX = finger.pageX;
+    this.fingerY = finger.pageY;
+  },
+
+  onTouchMove: function(event) {
+    var finger = event.targetTouches[0];
+    this.fingerX = finger.pageX;
+    this.fingerY = finger.pageY;
+    event.preventDefault();
+  },
+
+  onTouchEnd: function(event) {
+    this.fingerDown = false;
+  }
+};
+
+function Controller(square, handler)
+{
+  this.square = square;
+  this.initialSpeed = square.angleSpeed;
+  this.reducedSpeed = this.initialSpeed / 5;
+  this.handler = handler;
+}
+
+Controller.prototype = {
+  update: function() {
+    if (this.handler.fingerDown &&
+        this.square.isPointInside(this.handler.fingerX, this.handler.fingerY))
+      this.square.angleSpeed = this.reducedSpeed;
+    else
+      this.square.angleSpeed = this.initialSpeed;
+  }
+};
+
+function listen() {
+  var element = document.body;//$("canvas");
+  element.addEventListener('touchstart', handler.onTouchStart.bind(handler));
+  element.addEventListener('touchmove', handler.onTouchMove.bind(handler));
+  element.addEventListener('touchend', handler.onTouchEnd.bind(handler));
+}
 
 function step() {
   var t1 = Date.now();
   world.animate($("canvas"), t1 - t0);
   t0 = t1;
+  controller.update();
   webkitRequestAnimationFrame(step);
 }
 
@@ -152,3 +198,11 @@ function updateCanvasSize()
   canvas.height = document.body.clientHeight;
   canvas.width = document.body.clientWidth;
 }
+
+var world = new World();
+world.addObject(new Square(100));
+world.addObject(new Border(3));
+// world.addObject(new Points(10000, world.objects[0]));
+var t0 = Date.now();
+var handler = new Handler();
+var controller = new Controller(world.objects[0], handler);
