@@ -38,7 +38,7 @@ function Square(radius)
   this.centerY = 0;
   this.radius = radius;
   this.angle = 0;
-  this.angleSpeed = 0.001;
+  this.angleSpeed = 0.0015;
   this.pointAngles = [Math.PI / 4, 3 * Math.PI / 4, 5 * Math.PI / 4, 7 * Math.PI / 4];
 }
 
@@ -85,6 +85,12 @@ Square.prototype = {
     var p = this.toCartesian(Math.sqrt(x * x + y * y), Math.atan2(y, x) + this.angle);
     var rect = this.boundaryRect(this.calculatePoints(0));
     return p[0] >= rect[0][0] && p[1] >= rect[0][1] && p[0] <= rect[1][0] && p[1] <= rect[1][1];
+  },
+
+  radiusFromCenter: function(x, y) {
+    x = x - this.centerX;
+    y = this.centerY - y;
+    return Math.sqrt(x * x + y * y);
   },
 
   toCartesian: function(radius, angle) {
@@ -137,6 +143,9 @@ function Handler()
   this.fingerDown = false;
   this.fingerX = null;
   this.fingerY = null;
+  this.secondFingerDown = false;
+  this.secondFingerX = null;
+  this.secondFingerY = null;
 }
 
 Handler.prototype = {
@@ -151,11 +160,18 @@ Handler.prototype = {
     var finger = event.targetTouches[0];
     this.fingerX = finger.pageX;
     this.fingerY = finger.pageY;
+    if (event.touches.length > 1) {
+      this.secondFingerDown = true;
+      finger = event.targetTouches[1];
+      this.secondFingerX = finger.pageX;
+      this.secondFingerY = finger.pageY;
+    }
     event.preventDefault();
   },
 
   onTouchEnd: function(event) {
     this.fingerDown = false;
+    this.secondFingerDown = false;
   }
 };
 
@@ -163,16 +179,24 @@ function Controller(square, handler)
 {
   this.square = square;
   this.initialSpeed = square.angleSpeed;
-  this.reducedSpeed = this.initialSpeed / 5;
+  this.reducedSpeed = this.initialSpeed / 10;
   this.handler = handler;
 }
 
 Controller.prototype = {
   update: function() {
-    if (this.handler.fingerDown &&
-        this.square.isPointInside(this.handler.fingerX, this.handler.fingerY))
-      this.square.angleSpeed = this.reducedSpeed;
-    else
+    if (this.handler.fingerDown) {
+      if (this.square.isPointInside(this.handler.fingerX, this.handler.fingerY))
+        this.square.angleSpeed = this.reducedSpeed;
+      if (this.handler.secondFingerDown &&
+          (this.square.isPointInside(this.handler.fingerX, this.handler.fingerY) ||
+           this.square.isPointInside(this.handler.secondFingerX, this.handler.secondFingerY))) {
+        var radius = Math.max(
+          this.square.radiusFromCenter(this.handler.fingerX, this.handler.fingerY),
+          this.square.radiusFromCenter(this.handler.secondFingerX, this.handler.secondFingerY));
+        this.square.radius = radius;
+      }
+    } else
       this.square.angleSpeed = this.initialSpeed;
   }
 };
