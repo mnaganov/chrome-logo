@@ -1,3 +1,37 @@
+function World()
+{
+  this.objects = [];
+}
+
+World.prototype = {
+  addObject: function(object) {
+    this.objects.push(object);
+  },
+
+  animate: function(canvas, t) {
+    var context = canvas.getContext("2d");
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    for (var i = 0; i < this.objects.length; ++i) {
+      this.objects[i].animate(canvas, t);
+    }
+  }
+};
+
+function Border(margin)
+{
+  this.margin = margin;
+}
+
+Border.prototype = {
+  animate: function(canvas, t) {
+    var context = canvas.getContext("2d");
+    context.lineWidth = 1;
+    context.strokeStyle="#000";
+    var m = this.margin;
+    context.strokeRect(m, m, canvas.width - m * 2, canvas.height - m * 2);
+  }
+};
+
 function Square(radius)
 {
   this.centerX = 0;
@@ -9,16 +43,20 @@ function Square(radius)
 }
 
 Square.prototype = {
-  animate: function(t) {
-    var canvas = $("canvas");
-    var ctx = canvas.getContext("2d");
+  animate: function(canvas, t) {
+    this.centerX = canvas.width / 2;
+    this.centerY = canvas.height / 2;
     var points = this.calculatePoints();
-    var rect = this.findEnclosingRectangle(points);
-    ctx.clearRect(rect[0][0], rect[0][1], rect[1][0] - rect[0][0], rect[1][1] - rect[0][1]);
     this.updateAngle(t);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "#000";
-    this.draw(ctx, points);
+    var context = canvas.getContext("2d");
+    context.lineWidth = 1;
+    context.strokeStyle = "#000";
+    context.beginPath();
+    context.moveTo(points[0][0], points[0][1]);
+    for (i = 1; i < points.length; ++i)
+      context.lineTo(points[i][0], points[i][1]);
+    context.stroke();
+    context.closePath();
   },
 
   calculatePoints: function() {
@@ -27,32 +65,6 @@ Square.prototype = {
       points.push(this.toCartesian(this.angle + this.pointAngles[i]));
     points.push(points[0]);
     return points;
-  },
-
-  draw: function(ctx, points) {
-    ctx.beginPath();
-    ctx.moveTo(points[0][0], points[0][1]);
-    for (i = 1; i < points.length; ++i)
-      ctx.lineTo(points[i][0], points[i][1]);
-    ctx.stroke();
-    ctx.closePath();
-  },
-
-  findEnclosingRectangle: function(points) {
-    var minX = 1e10, minY = 1e10, maxX = -1e10, maxY = -1e10;
-    for (var i = 0; i < points.length; ++i) {
-      var pointX = points[i][0], pointY = points[i][1];
-      minX = Math.min(minX, pointX);
-      maxX = Math.max(maxX, pointX);
-      minY = Math.min(minY, pointY);
-      maxY = Math.max(maxY, pointY);
-    }
-    return [[minX - 2, minY - 2], [maxX + 2, maxY + 2]];
-  },
-
-  setCenter: function(centerX, centerY) {
-    this.centerX = centerX;
-    this.centerY = centerY;
   },
 
   toCartesian: function(angle) {
@@ -67,27 +79,16 @@ Square.prototype = {
   }
 };
 
-var square = new Square(100);
+var world = new World();
+world.addObject(new Square(100));
+world.addObject(new Border(3));
 var t0 = Date.now();
 
 function step() {
   var t1 = Date.now();
-  square.animate(t1 - t0);
+  world.animate($("canvas"), t1 - t0);
   t0 = t1;
   webkitRequestAnimationFrame(step);
-}
-
-function renderCanvas()
-{
-  var canvas = $("canvas");
-  var ctx = canvas.getContext("2d");
-
-  square.setCenter(canvas.width / 2, canvas.height / 2);
-
-  ctx.lineWidth = 1;
-  ctx.strokeStyle="#000";
-  var border = 3;
-  ctx.strokeRect(border, border, canvas.width - border * 2, canvas.height - border * 2);
 }
 
 function updateCanvasSize()
@@ -95,5 +96,4 @@ function updateCanvasSize()
   var canvas = $("canvas");
   canvas.height = document.body.clientHeight;
   canvas.width = document.body.clientWidth;
-  renderCanvas();
 }
