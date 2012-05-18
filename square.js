@@ -39,15 +39,16 @@ function Square(radius)
   this.radius = radius;
   this.angle = 0;
   this.angleSpeed = 0.001;
-  this.pointAngles = [0, Math.PI / 2, Math.PI, Math.PI * 3 / 2];
+  this.pointAngles = [Math.PI / 4, 3 * Math.PI / 4, 5 * Math.PI / 4, 7 * Math.PI / 4];
 }
 
 Square.prototype = {
   animate: function(canvas, t) {
     this.centerX = canvas.width / 2;
     this.centerY = canvas.height / 2;
-    var points = this.calculatePoints();
     this.updateAngle(t);
+    var points = this.calculatePoints(this.angle);
+    points.push(points[0]);
     var context = canvas.getContext("2d");
     context.lineWidth = 1;
     context.strokeStyle = "#000";
@@ -59,17 +60,36 @@ Square.prototype = {
     context.closePath();
   },
 
-  calculatePoints: function() {
+  boundaryRect: function(points) {
+    var minX = 1e10, minY = 1e10, maxX = -1e10, maxY = -1e10;
+    for (var i = 0; i < points.length; ++i) {
+      var point = points[i];
+      minX = Math.min(minX, point[0]);
+      maxX = Math.max(maxX, point[0]);
+      minY = Math.min(minY, point[1]);
+      maxY = Math.max(maxY, point[1]);
+    }
+    return [[minX, minY], [maxX, maxY]];
+  },
+
+  calculatePoints: function(angle) {
     var points = [];
     for (var i = 0; i < this.pointAngles.length; ++i)
-      points.push(this.toCartesian(this.angle + this.pointAngles[i]));
-    points.push(points[0]);
+      points.push(this.toCartesian(this.radius, angle + this.pointAngles[i]));
     return points;
   },
 
-  toCartesian: function(angle) {
-    return [this.centerX + this.radius * Math.cos(angle),
-            this.centerY + this.radius * Math.sin(angle)];
+  isPointInside: function(x, y) {
+    x = x - this.centerX;
+    y = this.centerY - y;
+    var p = this.toCartesian(Math.sqrt(x * x + y * y), Math.atan2(y, x) + this.angle);
+    var rect = this.boundaryRect(this.calculatePoints(0));
+    return p[0] >= rect[0][0] && p[1] >= rect[0][1] && p[0] <= rect[1][0] && p[1] <= rect[1][1];
+  },
+
+  toCartesian: function(radius, angle) {
+    return [this.centerX + radius * Math.cos(angle),
+            this.centerY + radius * Math.sin(angle)];
   },
 
   updateAngle: function(t) {
@@ -79,9 +99,44 @@ Square.prototype = {
   }
 };
 
+function Points(n, square)
+{
+  this.n = n;
+  this.square = square;
+  this.points = null;
+  this.width = null;
+  this.height = null;
+}
+
+Points.prototype = {
+  animate: function(canvas, t) {
+    if (!this.points || canvas.width != this.width || canvas.height != this.height)
+      this.generatePoints(canvas.width, canvas.height);
+    var context = canvas.getContext("2d");
+    context.lineWidth = 1;
+    for (var i = 0; i < this.points.length; ++i) {
+      var x = this.points[i][0];
+      var y = this.points[i][1];
+      context.strokeStyle = this.square.isPointInside(x, y) ? "#f00" : "#00f";
+      context.strokeRect(x, y, 1, 1);
+    }
+  },
+
+  generatePoints: function(width, height) {
+    this.width = width;
+    this.height = height;
+    this.points = new Array(this.n);
+    for (var i = 0; i < this.n; ++i)
+      this.points[i] = [Math.round(Math.random() * width),
+                        Math.round(Math.random() * height)];
+  }
+};
+
+
 var world = new World();
 world.addObject(new Square(100));
 world.addObject(new Border(3));
+world.addObject(new Points(1000, world.objects[0]));
 var t0 = Date.now();
 
 function step() {
