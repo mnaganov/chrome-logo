@@ -50,14 +50,19 @@ Square.prototype = {
     var points = this.calculatePoints(this.angle);
     points.push(points[0]);
     var context = canvas.getContext("2d");
-    context.lineWidth = 1;
-    context.strokeStyle = "#000";
     context.beginPath();
     context.moveTo(points[0][0], points[0][1]);
     for (i = 1; i < points.length; ++i)
       context.lineTo(points[i][0], points[i][1]);
-    context.stroke();
     context.closePath();
+    context.lineWidth = 1;
+    context.strokeStyle = "#000";
+    context.stroke();
+    var grd = context.createLinearGradient(points[0][0], points[0][1], points[3][0], points[3][1]);
+    grd.addColorStop(0, "#8ED6FF");
+    grd.addColorStop(1, "#004CB3");
+    context.fillStyle = grd;
+    context.fill();
   },
 
   boundaryRect: function(points) {
