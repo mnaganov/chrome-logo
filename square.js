@@ -178,7 +178,7 @@ Controller.prototype = {
 };
 
 function listen() {
-  var element = document.body;//$("canvas");
+  var element = $("canvas");
   element.addEventListener('touchstart', handler.onTouchStart.bind(handler));
   element.addEventListener('touchmove', handler.onTouchMove.bind(handler));
   element.addEventListener('touchend', handler.onTouchEnd.bind(handler));
