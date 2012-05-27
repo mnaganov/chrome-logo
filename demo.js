@@ -32,72 +32,58 @@ Border.prototype = {
   }
 };
 
-function Square(radius)
+function Logo(radius)
 {
   this.centerX = 0;
   this.centerY = 0;
-  this.radius = radius;
   this.angle = 0;
-  this.angleSpeed = 0.001;
-  this.pointAngles = [Math.PI / 4, 3 * Math.PI / 4, 5 * Math.PI / 4, 7 * Math.PI / 4];
+  this.angleSpeed = 0.0015;
+  this.updateRadius(radius);
+  this.segmentPointAngles = [-1 * Math.PI / 6, -1 * Math.PI / 2, -7 * Math.PI / 6, -5 * Math.PI / 6];
+  this.segmentColors = ['#DE2126', '#F7CA10', '#4CB748'];
 }
 
-Square.prototype = {
+Logo.prototype = {
   animate: function(canvas, t) {
     this.centerX = canvas.width / 2;
     this.centerY = canvas.height / 2;
     this.updateAngle(t);
-    var points = this.calculatePoints(this.angle);
-    points.push(points[0]);
     var context = canvas.getContext("2d");
-    context.beginPath();
-    context.moveTo(points[0][0], points[0][1]);
-    for (i = 1; i < points.length; ++i)
-      context.lineTo(points[i][0], points[i][1]);
-    context.closePath();
-    context.lineWidth = 1;
-    context.strokeStyle = "#000";
-    context.stroke();
-    var grd = context.createLinearGradient(points[0][0], points[0][1], points[3][0], points[3][1]);
-    grd.addColorStop(0, "#8ED6FF");
-    grd.addColorStop(1, "#004CB3");
-    context.fillStyle = grd;
-    context.fill();
-  },
-
-  boundaryRect: function(points) {
-    var minX = 1e10, minY = 1e10, maxX = -1e10, maxY = -1e10;
-    for (var i = 0; i < points.length; ++i) {
-      var point = points[i];
-      minX = Math.min(minX, point[0]);
-      maxX = Math.max(maxX, point[0]);
-      minY = Math.min(minY, point[1]);
-      maxY = Math.max(maxY, point[1]);
+    for (var s = 0; s < this.segmentColors.length; ++s) {
+      var rotation = this.angle + s * 2 * Math.PI / 3;
+      var points = this.calculatePoints(rotation);
+      context.beginPath();
+      context.moveTo(points[0][0], points[0][1]);
+      for (var i = 1; i < points.length; ++i)
+        context.lineTo(points[i][0], points[i][1]);
+      context.arc(this.centerX, this.centerY, this.radius, this.segmentPointAngles[3] + rotation, this.segmentPointAngles[0] + rotation, false);
+      context.closePath();
+      context.fillStyle = this.segmentColors[s];
+      context.fill();
     }
-    return [[minX, minY], [maxX, maxY]];
+
+    context.beginPath();
+    context.arc(this.centerX, this.centerY, this.innerRadius, 0, 2 * Math.PI, false);
+    context.closePath();
+    context.fillStyle = 'white';
+    context.fill();
+
+    context.beginPath();
+    context.arc(this.centerX, this.centerY, this.innerRadius * 0.85, 0, 2 * Math.PI, false);
+    context.closePath();
+    context.fillStyle = '#2D78BA';
+    context.fill();
   },
 
   calculatePoints: function(angle) {
     var points = [];
-    for (var i = 0; i < this.pointAngles.length; ++i)
-      points.push(this.toCartesian(this.radius, angle + this.pointAngles[i]));
+    for (var i = 0; i < this.segmentPointAngles.length; ++i)
+      points.push(this.toCartesian(this.segmentPointRadiuses[i], angle + this.segmentPointAngles[i]));
     return points;
   },
 
   isPointInside: function(x, y) {
-    // Quick rough check.
-    if (!this.isPointInsideRect(x, y, this.boundaryRect(this.calculatePoints(this.angle))))
-      return false;
-
-    // Precise check.
-    x = x - this.centerX;
-    y = this.centerY - y;
-    var p = this.toCartesian(Math.sqrt(x * x + y * y), Math.atan2(y, x) + this.angle);
-    return this.isPointInsideRect(p[0], p[1], this.boundaryRect(this.calculatePoints(0)));
-  },
-
-  isPointInsideRect: function(x, y, rect) {
-    return x >= rect[0][0] && y >= rect[0][1] && x <= rect[1][0] && y <= rect[1][1];
+    return this.radiusFromCenter(x, y) <= this.radius;
   },
 
   radiusFromCenter: function(x, y) {
@@ -115,13 +101,19 @@ Square.prototype = {
     this.angle += this.angleSpeed * t;
     while (this.angle > Math.PI * 2)
       this.angle -= Math.PI * 2;
+  },
+
+  updateRadius: function(radius) {
+    this.radius = radius;
+    this.innerRadius = radius * 0.45;
+    this.segmentPointRadiuses = [radius, this.innerRadius, this.innerRadius, radius];
   }
 };
 
-function Points(n, square)
+function Points(n, logo)
 {
   this.n = n;
-  this.square = square;
+  this.logo = logo;
   this.points = null;
   this.width = null;
   this.height = null;
@@ -136,7 +128,7 @@ Points.prototype = {
     for (var i = 0; i < this.points.length; ++i) {
       var x = this.points[i][0];
       var y = this.points[i][1];
-      context.strokeStyle = this.square.isPointInside(x, y) ? "#f00" : "#00f";
+      context.strokeStyle = this.logo.isPointInside(x, y) ? "#f0f" : "#00f";
       context.strokeRect(x, y, 1, 1);
     }
   },
@@ -188,10 +180,10 @@ Handler.prototype = {
   }
 };
 
-function Controller(square, handler)
+function Controller(logo, handler)
 {
-  this.square = square;
-  this.initialSpeed = square.angleSpeed;
+  this.logo = logo;
+  this.initialSpeed = logo.angleSpeed;
   this.reducedSpeed = this.initialSpeed / 10;
   this.handler = handler;
 }
@@ -199,20 +191,20 @@ function Controller(square, handler)
 Controller.prototype = {
   update: function() {
     if (this.handler.fingerDown) {
-      if (this.square.isPointInside(this.handler.fingerX, this.handler.fingerY))
-        this.square.angleSpeed = this.reducedSpeed;
+      if (this.logo.isPointInside(this.handler.fingerX, this.handler.fingerY))
+        this.logo.angleSpeed = this.reducedSpeed;
       else
-        this.square.angleSpeed = this.initialSpeed;
+        this.logo.angleSpeed = this.initialSpeed;
       if (this.handler.secondFingerDown &&
-          (this.square.isPointInside(this.handler.fingerX, this.handler.fingerY) ||
-           this.square.isPointInside(this.handler.secondFingerX, this.handler.secondFingerY))) {
+          (this.logo.isPointInside(this.handler.fingerX, this.handler.fingerY) ||
+           this.logo.isPointInside(this.handler.secondFingerX, this.handler.secondFingerY))) {
         var radius = Math.max(
-          this.square.radiusFromCenter(this.handler.fingerX, this.handler.fingerY),
-          this.square.radiusFromCenter(this.handler.secondFingerX, this.handler.secondFingerY));
-        this.square.radius = radius;
+          this.logo.radiusFromCenter(this.handler.fingerX, this.handler.fingerY),
+          this.logo.radiusFromCenter(this.handler.secondFingerX, this.handler.secondFingerY));
+        this.logo.updateRadius(radius);
       }
     } else
-      this.square.angleSpeed = this.initialSpeed;
+      this.logo.angleSpeed = this.initialSpeed;
   }
 };
 
@@ -239,7 +231,7 @@ function updateCanvasSize()
 }
 
 var world = new World();
-world.addObject(new Square(100));
+world.addObject(new Logo(200));
 world.addObject(new Border(3));
 // world.addObject(new Points(10000, world.objects[0]));
 var t0 = Date.now();
